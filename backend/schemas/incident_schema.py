@@ -1,0 +1,1 @@
+# PydanticAI schema for incidents
