@@ -1,7 +1,7 @@
 # S3 storage helper
 import json
 import logging
-from typing import List
+from typing import Any,List
 
 
 import boto3
@@ -16,9 +16,9 @@ from schemas.log_event import LogEvent
 s3_client = boto3.client("s3", region_name=AWS_REGION)
 
 
-def save_json_to_s3(data: dict, bucket_name: str, key: str) -> None:
+def save_json_to_s3(data: Any, bucket_name: str, key: str) -> None:
     """
-    Upload any JSON-serializable dictionary to S3.
+    Upload any JSON-serializable data to S3.
     """
     try:
         s3_client.put_object(

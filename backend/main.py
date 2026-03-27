@@ -24,10 +24,11 @@ if __name__ == "__main__":
         print(f"Uploaded to S3: s3://{S3_BUCKET_NAME}/{s3_key}")
 
     logs = fetch_logs(
-    instance_id=INSTANCE_ID,
-    log_group_name=LOG_GROUP_NAME,
-    minutes=120
-       )
+      instance_id=INSTANCE_ID,
+      log_group_name=LOG_GROUP_NAME,
+      minutes=120,
+    )
+    logs = logs or []
     print(f"Fetched {len(logs)} logs")
     save_logs(logs)
     s3_key = upload_logs_to_s3(
