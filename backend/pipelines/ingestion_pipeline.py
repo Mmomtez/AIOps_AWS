@@ -28,7 +28,7 @@ def run_ingestion_pipeline():
     logs = fetch_logs(
         instance_id=INSTANCE_ID,
         log_group_name=LOG_GROUP_NAME,
-        minutes=1300000  # wider window
+        minutes=60 # wider window
     )
 
     print(f"Fetched {len(logs)} logs")
