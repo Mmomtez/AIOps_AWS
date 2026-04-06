@@ -2,8 +2,8 @@ from typing import List
 from pathlib import Path
 import json
 
-from schemas.metrics import Metrics
-from schemas.log_event import LogEvent
+from backend.schemas.metrics import Metrics
+from backend.schemas.log_event import LogEvent
 
 
 def save_metrics(metrics: Metrics):

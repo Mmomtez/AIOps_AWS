@@ -6,9 +6,9 @@ from typing import Any,List
 
 import boto3
 
-from config.settings import AWS_REGION
-from schemas.metrics import Metrics
-from schemas.log_event import LogEvent
+from backend.config.settings import AWS_REGION
+from backend.schemas.metrics import Metrics
+from backend.schemas.log_event import LogEvent
 
 
 

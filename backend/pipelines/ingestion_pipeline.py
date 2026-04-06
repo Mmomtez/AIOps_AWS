@@ -1,10 +1,10 @@
 # Data ingestion pipeline
-from aws.collector_service import collect_metrics
-from aws.log_collector import fetch_logs
-from aws.storage import save_metrics, save_logs
-from aws.s3_storage import upload_metrics_to_s3, upload_logs_to_s3
+from backend.aws.collector_service import collect_metrics
+from backend.aws.log_collector import fetch_logs
+from backend.aws.storage import save_metrics, save_logs
+from backend.aws.s3_storage import upload_metrics_to_s3, upload_logs_to_s3
 
-from config.settings import INSTANCE_ID, S3_BUCKET_NAME
+from backend.config.settings import INSTANCE_ID, S3_BUCKET_NAME
 
 
 LOG_GROUP_NAME = "ec2AGENTLOGS"

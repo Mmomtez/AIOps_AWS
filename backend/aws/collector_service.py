@@ -1,5 +1,5 @@
-from schemas.metrics import Metrics
-from aws.cloudwatch_collector import fetch_all_metrics_batch, fetch_single_metric
+from backend.schemas.metrics import Metrics
+from backend.aws.cloudwatch_collector import fetch_all_metrics_batch, fetch_single_metric
 import logging
 
 
