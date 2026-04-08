@@ -39,6 +39,7 @@ opentelemetry-semantic-conventions==0.61b0
 orjson==3.11.7
 ormsgpack==1.12.2
 packaging==25.0
+pandas==2.2.3
 protobuf==6.33.6
 pydantic==2.12.5
 pydantic_core==2.41.5

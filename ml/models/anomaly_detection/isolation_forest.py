@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+from importlib import import_module
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -32,43 +34,42 @@ DEFAULT_METRIC_COLUMNS = [
 ]
 
 
-def _resolve_metrics_dir(metrics_dir: str | Path) -> Path:
-	path = Path(metrics_dir)
-	if path.exists():
-		return path
-
-	fallbacks = [Path("data/metrics"), Path("backend/data/metrics")]
-	for candidate in fallbacks:
-		if candidate.exists():
-			return candidate
-
-	raise FileNotFoundError(f"Metrics directory not found: {path}")
-
-
 def load_metrics_dataframe(
-	metrics_dir: str | Path,
+	bucket_name: str | None = None,
+	prefix: str = "metrics/",
 	metric_columns: Iterable[str] | None = None,
 ) -> pd.DataFrame:
-	"""Load collected metrics JSON files into a clean DataFrame."""
-	metrics_path = _resolve_metrics_dir(metrics_dir)
+	"""Load collected metrics JSON objects from S3 into a clean DataFrame."""
+	bucket = bucket_name or os.getenv("S3_BUCKET_NAME")
+	if not bucket:
+		raise ValueError("S3 bucket name is required. Pass bucket_name or set S3_BUCKET_NAME.")
 
 	columns = list(metric_columns or DEFAULT_METRIC_COLUMNS)
 	rows: list[dict[str, Any]] = []
+	boto3 = import_module("boto3")
+	s3_client = boto3.client("s3")
+	paginator = s3_client.get_paginator("list_objects_v2")
+	normalized_prefix = prefix.rstrip("/") + "/" if prefix else ""
 
-	for json_file in sorted(metrics_path.glob("*.json")):
-		with json_file.open("r", encoding="utf-8") as f:
-			payload = json.load(f)
+	for page in paginator.paginate(Bucket=bucket, Prefix=normalized_prefix):
+		for item in page.get("Contents", []):
+			key = item.get("Key", "")
+			if not key.endswith(".json"):
+				continue
 
-		if isinstance(payload, list):
-			continue
+			obj = s3_client.get_object(Bucket=bucket, Key=key)
+			payload = json.loads(obj["Body"].read().decode("utf-8"))
 
-		row = {col: float(payload.get(col, 0.0) or 0.0) for col in columns}
-		row["instance_id"] = payload.get("instance_id", "")
-		row["timestamp"] = payload.get("timestamp")
-		rows.append(row)
+			if isinstance(payload, list):
+				continue
+
+			row = {col: float(payload.get(col, 0.0) or 0.0) for col in columns}
+			row["instance_id"] = payload.get("instance_id", "")
+			row["timestamp"] = payload.get("timestamp")
+			rows.append(row)
 
 	if not rows:
-		raise ValueError(f"No metrics JSON files found in: {metrics_path}")
+		raise ValueError(f"No metrics JSON files found in s3://{bucket}/{normalized_prefix}")
 
 	df = pd.DataFrame(rows)
 	df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
@@ -104,8 +105,9 @@ def train_isolation_forest(
 
 
 def fine_tune_isolation_forest(
-	metrics_dir: str | Path,
 	output_path: str | Path,
+	bucket_name: str | None = None,
+	prefix: str = "metrics/",
 	feature_columns: Iterable[str] | None = None,
 	contamination: float = 0.05,
 	random_state: int = 42,
@@ -116,7 +118,11 @@ def fine_tune_isolation_forest(
 	Isolation Forest does not support incremental updates, so "fine-tuning"
 	here means retraining on the current metrics history.
 	"""
-	df = load_metrics_dataframe(metrics_dir=metrics_dir, metric_columns=feature_columns)
+	df = load_metrics_dataframe(
+		bucket_name=bucket_name,
+		prefix=prefix,
+		metric_columns=feature_columns,
+	)
 	model = train_isolation_forest(
 		data=df,
 		feature_columns=feature_columns,

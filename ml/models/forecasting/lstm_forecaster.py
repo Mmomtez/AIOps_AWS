@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+from importlib import import_module
 from pathlib import Path
 from typing import Iterable
 
@@ -42,40 +44,39 @@ DEFAULT_METRIC_COLUMNS = [
 ]
 
 
-def _resolve_metrics_dir(metrics_dir: str | Path) -> Path:
-	path = Path(metrics_dir)
-	if path.exists():
-		return path
-
-	fallbacks = [Path("data/metrics"), Path("backend/data/metrics")]
-	for candidate in fallbacks:
-		if candidate.exists():
-			return candidate
-
-	raise FileNotFoundError(f"Metrics directory not found: {path}")
-
-
 def load_metrics_dataframe(
-	metrics_dir: str | Path,
+	bucket_name: str | None = None,
+	prefix: str = "metrics/",
 	metric_columns: Iterable[str] | None = None,
 ) -> pd.DataFrame:
-	metrics_path = _resolve_metrics_dir(metrics_dir)
+	bucket = bucket_name or os.getenv("S3_BUCKET_NAME")
+	if not bucket:
+		raise ValueError("S3 bucket name is required. Pass bucket_name or set S3_BUCKET_NAME.")
 
 	columns = list(metric_columns or DEFAULT_METRIC_COLUMNS)
 	rows: list[dict[str, float | str | None]] = []
+	boto3 = import_module("boto3")
+	s3_client = boto3.client("s3")
+	paginator = s3_client.get_paginator("list_objects_v2")
+	normalized_prefix = prefix.rstrip("/") + "/" if prefix else ""
 
-	for json_file in sorted(metrics_path.glob("*.json")):
-		with json_file.open("r", encoding="utf-8") as f:
-			payload = json.load(f)
-		if isinstance(payload, list):
-			continue
+	for page in paginator.paginate(Bucket=bucket, Prefix=normalized_prefix):
+		for item in page.get("Contents", []):
+			key = item.get("Key", "")
+			if not key.endswith(".json"):
+				continue
 
-		row = {c: float(payload.get(c, 0.0) or 0.0) for c in columns}
-		row["timestamp"] = payload.get("timestamp")
-		rows.append(row)
+			obj = s3_client.get_object(Bucket=bucket, Key=key)
+			payload = json.loads(obj["Body"].read().decode("utf-8"))
+			if isinstance(payload, list):
+				continue
+
+			row = {c: float(payload.get(c, 0.0) or 0.0) for c in columns}
+			row["timestamp"] = payload.get("timestamp")
+			rows.append(row)
 
 	if not rows:
-		raise ValueError(f"No metrics JSON files found in: {metrics_path}")
+		raise ValueError(f"No metrics JSON files found in s3://{bucket}/{normalized_prefix}")
 
 	df = pd.DataFrame(rows)
 	df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
@@ -137,9 +138,10 @@ def train_lstm_forecaster(
 
 
 def fine_tune_lstm(
-	metrics_dir: str | Path,
 	model_path: str | Path,
 	scaler_path: str | Path,
+	bucket_name: str | None = None,
+	prefix: str = "metrics/",
 	feature_columns: Iterable[str] | None = None,
 	lookback: int = 24,
 	epochs: int = 8,
@@ -147,7 +149,11 @@ def fine_tune_lstm(
 ) -> tuple[Sequential, MinMaxScaler]:
 	"""Fine-tune an LSTM using latest collected metrics history."""
 	columns = list(feature_columns or DEFAULT_METRIC_COLUMNS)
-	df = load_metrics_dataframe(metrics_dir=metrics_dir, metric_columns=columns)
+	df = load_metrics_dataframe(
+		bucket_name=bucket_name,
+		prefix=prefix,
+		metric_columns=columns,
+	)
 
 	raw = df[columns].fillna(0.0).values
 	if len(raw) <= lookback:
