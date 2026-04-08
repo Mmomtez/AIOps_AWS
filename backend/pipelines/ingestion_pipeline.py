@@ -10,6 +10,33 @@ from backend.config.settings import INSTANCE_ID, S3_BUCKET_NAME
 LOG_GROUP_NAME = "ec2AGENTLOGS"
 
 
+def summarize_logs(logs: list[dict]) -> dict:
+    error_count = 0
+    warning_count = 0
+    keywords_found = set()
+
+    tracked_keywords = ["error", "exception", "timeout", "failed", "refused", "killed"]
+
+    for log in logs:
+        message = log.get("message", "").lower()
+
+        if "error" in message:
+            error_count += 1
+
+        if "warning" in message:
+            warning_count += 1
+
+        for keyword in tracked_keywords:
+            if keyword in message:
+                keywords_found.add(keyword)
+
+    return {
+        "error_count": error_count,
+        "warning_count": warning_count,
+        "keywords": sorted(list(keywords_found)),
+    }
+
+
 def run_ingestion_pipeline():
     # ── Metrics ───────────────────────────────────────────────
     metrics = collect_metrics(INSTANCE_ID)
@@ -44,7 +71,18 @@ def run_ingestion_pipeline():
     if logs_s3_key:
         print(f"Logs uploaded to S3: s3://{S3_BUCKET_NAME}/{logs_s3_key}")
 
-    return {
-        "metrics": metrics,
-        "logs": logs
+    # Log summary
+    log_summary = summarize_logs(logs)
+
+    # Final observation object
+    metrics_dict = metrics.model_dump()
+    metrics_dict["timestamp"] = metrics.timestamp.isoformat()
+    observation = {
+        "instance_id": metrics.instance_id,
+        "timestamp": metrics.timestamp.isoformat(),
+        "metrics": metrics.model_dump(),   # use metrics.dict() if model_dump doesn't work
+        "raw_log_count": len(logs),
+        "log_summary": log_summary,
     }
+
+    return observation
