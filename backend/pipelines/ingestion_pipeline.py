@@ -1,13 +1,11 @@
 # Data ingestion pipeline
 from backend.aws.collector_service import collect_metrics
 from backend.aws.log_collector import fetch_logs
-from backend.aws.storage import save_metrics, save_logs
+from backend.aws.storage import save_metrics, save_logs, save_observation
 from backend.aws.s3_storage import upload_metrics_to_s3, upload_logs_to_s3
+from backend.schemas.observation import Observation, LogSummary
 
-from backend.config.settings import INSTANCE_ID, S3_BUCKET_NAME
-
-
-LOG_GROUP_NAME = "ec2AGENTLOGS"
+from backend.config.settings import INSTANCE_ID, S3_BUCKET_NAME, LOG_GROUP_NAME
 
 
 def summarize_logs(logs: list[dict]) -> dict:
@@ -55,7 +53,7 @@ def run_ingestion_pipeline():
     logs = fetch_logs(
         instance_id=INSTANCE_ID,
         log_group_name=LOG_GROUP_NAME,
-        minutes=60 # wider window
+        minutes=60,
     )
 
     print(f"Fetched {len(logs)} logs")
@@ -75,14 +73,15 @@ def run_ingestion_pipeline():
     log_summary = summarize_logs(logs)
 
     # Final observation object
-    metrics_dict = metrics.model_dump()
-    metrics_dict["timestamp"] = metrics.timestamp.isoformat()
-    observation = {
-        "instance_id": metrics.instance_id,
-        "timestamp": metrics.timestamp.isoformat(),
-        "metrics": metrics.model_dump(),   # use metrics.dict() if model_dump doesn't work
-        "raw_log_count": len(logs),
-        "log_summary": log_summary,
-    }
+    observation = Observation(
+        instance_id=INSTANCE_ID,
+        timestamp=metrics.timestamp,
+        metrics=metrics,
+        raw_log_count=len(logs),
+        log_summary=LogSummary(**log_summary),
+    )
+
+    observation_path = save_observation(observation)
+    print(f"Observation saved locally: {observation_path}")
 
     return observation

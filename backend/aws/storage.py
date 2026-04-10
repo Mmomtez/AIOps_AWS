@@ -4,6 +4,7 @@ import json
 
 from backend.schemas.metrics import Metrics
 from backend.schemas.log_event import LogEvent
+from backend.schemas.observation import Observation
 
 
 def save_metrics(metrics: Metrics):
@@ -42,3 +43,17 @@ def save_logs(logs: List[LogEvent]):
         )
 
     print(f"Logs saved to {file_path}")
+    
+
+def save_observation(observation: Observation) -> str:
+    path = Path("./data/observations")
+    path.mkdir(parents=True, exist_ok=True)
+
+    timestamp = observation.timestamp.isoformat().replace(":", "-")
+    filename = f"{observation.instance_id}_{timestamp}.json"
+    file_path = path / filename
+
+    with file_path.open("w", encoding="utf-8") as f:
+        f.write(observation.model_dump_json(indent=2))
+
+    return str(file_path)
