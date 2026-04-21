@@ -1,11 +1,12 @@
-# backend/main.py
+from fastapi import FastAPI
+from backend.api.health import router as health_router
+from backend.api.routes import router as api_router
 
-from backend.pipelines.ingestion_pipeline import run_ingestion_pipeline
-from backend.pipelines.inference_pipeline import run_inference_pipeline
+app = FastAPI(
+    title="AIOps AWS Backend",
+    version="1.0.0",
+    description="Autonomous AIOps backend for AWS monitoring and anomaly detection",
+)
 
-if __name__ == "__main__":
-    observation = run_ingestion_pipeline()
-    print("Observation:", observation)
-
-    result = run_inference_pipeline(observation)
-    print("Inference result:", result)
+app.include_router(health_router)
+app.include_router(api_router)

@@ -8,6 +8,7 @@ from backend.pipelines.inference_pipeline import run_inference_pipeline
 from backend.schemas.observation import Observation
 from backend.schemas.anomaly_result import AnomalyResult
 from backend.schemas.inference_response import InferenceResponse
+from backend.aws.storage import load_latest_observation
 
 router = APIRouter(prefix="/api", tags=["aiops"])
 
@@ -34,6 +35,24 @@ def run_ingestion():
 
 @router.post("/run-inference", response_model=InferenceResponse)
 def run_inference():
+    observation = load_latest_observation()
+
+    if observation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No observation found. Run /api/run-ingestion first."
+        )
+
+    result = run_inference_pipeline(observation)
+
+    return InferenceResponse(
+        observation=observation,
+        result=result,
+    )
+
+
+@router.post("/run-full-cycle", response_model=InferenceResponse)
+def run_full_cycle():
     observation = run_ingestion_pipeline()
     result = run_inference_pipeline(observation)
 
@@ -49,6 +68,7 @@ def get_latest_observation():
     if not observation:
         raise HTTPException(status_code=404, detail="No observation found")
     return observation
+
 
 @router.get("/latest-anomaly", response_model=AnomalyResult)
 def get_latest_anomaly():

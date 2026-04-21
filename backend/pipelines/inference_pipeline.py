@@ -1,6 +1,7 @@
 # backend/pipelines/inference_pipeline.py
 
 from backend.schemas.anomaly_result import AnomalyResult
+from backend.aws.storage import save_anomaly_result
 
 FEATURE_THRESHOLDS = {
     "cpu": 80.0,
@@ -54,5 +55,7 @@ def run_inference_pipeline(observation):
     log_summary = observation.log_summary.model_dump()
 
     result = detect_anomaly_rule_based(metrics, log_summary)
+    saved_path = save_anomaly_result(result)
     print("Anomaly result:", result)
+    print(f"Anomaly result saved locally: {saved_path}")
     return result
