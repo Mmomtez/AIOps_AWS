@@ -3,8 +3,8 @@ from datetime import datetime, timezone, timedelta
 
 import boto3
 
-from config.settings import AWS_REGION
-from schemas.log_event import LogEvent
+from backend.config.settings import AWS_REGION
+from backend.schemas.log_event import LogEvent
 
 
 logs_client = boto3.client("logs", region_name=AWS_REGION)

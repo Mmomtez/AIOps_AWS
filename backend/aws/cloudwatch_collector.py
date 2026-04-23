@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 
 import boto3
 
-from config.settings import AWS_REGION
+from backend.config.settings import AWS_REGION
 
 cloudwatch = boto3.client("cloudwatch", region_name=AWS_REGION)
 ec2_client = boto3.client("ec2", region_name=AWS_REGION)

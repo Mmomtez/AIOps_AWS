@@ -4,8 +4,8 @@ from backend.api.routes import router as api_router
 
 app = FastAPI(
     title="AIOps AWS Backend",
-    version="1.0.0",
-    description="Autonomous AIOps backend for AWS monitoring and anomaly detection",
+    version="0.1.0",
+    description="Backend API for AWS monitoring, anomaly detection, and recommendations.",
 )
 
 app.include_router(health_router)
