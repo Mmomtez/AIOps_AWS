@@ -1,0 +1,16 @@
+services:
+  backend:
+    image: python:3.11-slim
+    container_name: aiops-backend
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - ${USERPROFILE}/.aws:/root/.aws:ro
+    env_file:
+      - ./backend/config/.env
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             pip install --no-cache-dir python-dotenv uvicorn &&
+             uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload"
