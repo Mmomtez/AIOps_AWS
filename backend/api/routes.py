@@ -1,8 +1,10 @@
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from backend.api.dependencies import get_current_user
+from backend.models.auth import User
 from backend.pipelines.ingestion_pipeline import run_ingestion_pipeline
 from backend.pipelines.inference_pipeline import run_inference_pipeline
 from backend.schemas.observation import Observation
@@ -28,13 +30,13 @@ def _read_latest_json(folder: str):
 
 
 @router.post("/run-ingestion", response_model=Observation)
-def run_ingestion():
+def run_ingestion(_: User = Depends(get_current_user)):
     observation = run_ingestion_pipeline()
     return observation
 
 
 @router.post("/run-inference", response_model=InferenceResponse)
-def run_inference():
+def run_inference(_: User = Depends(get_current_user)):
     observation = load_latest_observation()
 
     if observation is None:
@@ -52,7 +54,7 @@ def run_inference():
 
 
 @router.post("/run-full-cycle", response_model=InferenceResponse)
-def run_full_cycle():
+def run_full_cycle(_: User = Depends(get_current_user)):
     observation = run_ingestion_pipeline()
     result = run_inference_pipeline(observation)
 
@@ -63,7 +65,7 @@ def run_full_cycle():
 
 
 @router.get("/latest-observation", response_model=Observation)
-def get_latest_observation():
+def get_latest_observation(_: User = Depends(get_current_user)):
     observation = _read_latest_json("./data/observations")
     if not observation:
         raise HTTPException(status_code=404, detail="No observation found")
@@ -71,7 +73,7 @@ def get_latest_observation():
 
 
 @router.get("/latest-anomaly", response_model=AnomalyResult)
-def get_latest_anomaly():
+def get_latest_anomaly(_: User = Depends(get_current_user)):
     result = _read_latest_json("./data/predictions")
     if not result:
         raise HTTPException(status_code=404, detail="No anomaly result found")
