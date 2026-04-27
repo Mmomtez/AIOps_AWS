@@ -4,6 +4,11 @@ venv1/
 __pycache__/
 *.pyc
 config/.env
-logs/   
+backend/config/.env
+.env
+.env.*
+!.env.example
+!backend/config/exemple.env
+logs/
 metrics/
 data/

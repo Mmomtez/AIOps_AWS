@@ -1,4 +1,21 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: aiops-postgres
+    environment:
+      POSTGRES_DB: aiops
+      POSTGRES_USER: aiops_user
+      POSTGRES_PASSWORD: aiops_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiops_user -d aiops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     image: python:3.11-slim
     container_name: aiops-backend
@@ -10,7 +27,13 @@ services:
       - ./backend/config/.env
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     command: >
       sh -c "pip install --no-cache-dir -r requirements.txt &&
              pip install --no-cache-dir python-dotenv uvicorn &&
              uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload"
+
+volumes:
+  postgres_data:
