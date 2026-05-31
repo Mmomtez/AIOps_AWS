@@ -25,6 +25,13 @@ class AuditEventType(str, enum.Enum):
     verify_email_success = "verify_email_success"
     password_reset_request = "password_reset_request"
     password_reset_success = "password_reset_success"
+    profile_updated = "profile_updated"
+    password_changed = "password_changed"
+    account_deactivated = "account_deactivated"
+    session_revoked = "session_revoked"
+    admin_user_updated = "admin_user_updated"
+    admin_user_unlocked = "admin_user_unlocked"
+    admin_sessions_revoked = "admin_sessions_revoked"
 
 
 class User(Base):
@@ -38,6 +45,10 @@ class User(Base):
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     failed_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

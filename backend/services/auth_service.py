@@ -115,6 +115,7 @@ def authenticate_user(db: Session, email: str, password: str, ip_address: str | 
 
     user.failed_attempts = 0
     user.locked_until = None
+    user.last_login_at = utcnow()
     _audit(db, AuditEventType.login_success, user.id, ip_address, user_agent, detail="Login successful")
     return user
 
