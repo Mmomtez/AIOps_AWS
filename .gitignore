@@ -1,4 +1,5 @@
 venv/
+.venv
 venv1/
 __pycache__/
 *.pyc
@@ -8,6 +9,6 @@ backend/config/.env
 .env.*
 !.env.example
 !backend/config/exemple.env
-logs/   
+logs/
 metrics/
 data/
